@@ -1,6 +1,6 @@
 # BJOTA Reservas: SaaS de citas, caja y reportes para barberías
 
-**SaaS multi-negocio en producción · [reservas.bjota.online](https://reservas.bjota.online) · Trujillo, Perú · 2026**
+**SaaS multi-negocio (un solo sistema para muchas barberías) en producción · [reservas.bjota.online](https://reservas.bjota.online) · Trujillo, Perú · 2026**
 
 Cada barbería obtiene **su propia página de reservas** y un **panel para el celular** con agenda por barbero, punto de venta y caja, adelantos por Yape y reportes de cuánto produjo cada barbero.
 
@@ -32,10 +32,10 @@ Las barberías pequeñas (2 a 5 barberos) agendan por WhatsApp, cobran en efecti
 | Para | Qué hace |
 |---|---|
 | **El cliente** | Página de la barbería con fotos, promociones y equipo; reserva en 5 pasos **sin crear cuenta**; adelanto por Yape o Plin |
-| **El dueño** | Aviso push al celular por cada reserva; agenda por barbero (día, semana, mes, lista); confirmación por WhatsApp con un toque |
+| **El dueño** | Aviso al celular por cada reserva; agenda por barbero (día, semana, mes, lista); confirmación por WhatsApp con un toque |
 | **La caja** | Punto de venta por método de pago, devoluciones, propinas, apertura y cierre de caja, adelantos verificables |
 | **Los números** | Reportes de producción por barbero, servicios y productos top, evolución diaria frente al periodo anterior |
-| **La plataforma** | Multi-negocio con planes, accesos con vencimiento, invitaciones de un solo uso, auditoría y 25 videos de ayuda |
+| **La plataforma** | Muchas barberías en un solo sistema, con planes, accesos con vencimiento, invitaciones de un solo uso, auditoría y 25 videos de ayuda |
 
 ## Reservar en 5 pasos
 
@@ -59,25 +59,25 @@ Las barberías pequeñas (2 a 5 barberos) agendan por WhatsApp, cobran en efecti
 
 ![Arquitectura](img/arquitectura.png)
 
-**Decisiones clave:**
-- **Seguridad en la base de datos:** Row Level Security por negocio y por rol (dueño, administrador, encargado y barbero; el barbero solo ve sus citas). El id del negocio nunca se acepta del cliente.
-- **El dinero solo se escribe por funciones RPC:** ventas, caja y adelantos bloquean la escritura directa, y un script comprueba que 60 intentos fallen.
-- **Sin citas cruzadas:** una restricción `EXCLUDE` con `btree_gist` impide en PostgreSQL que dos citas del mismo barbero se solapen.
-- **Reserva pública protegida:** límites por teléfono, por IP y por negocio, y una reserva pendiente por número.
-- **Cabeceras de seguridad:** CSP con nonce y `strict-dynamic`, HSTS y límite de intentos de login en la app y en Nginx.
-- **Autoalojado:** VPS Linux con Docker Compose (Supabase, Next.js en build standalone y Nginx), migrado desde Vercel y Supabase Cloud.
+**Decisiones clave (explicadas simple):**
+- **Cada negocio ve solo lo suyo:** uso RLS, una función de la base de datos que separa los datos de cada barbería. Además, cada rol ve lo que le toca: dueño, administrador, encargado y barbero (el barbero solo ve sus propias citas). El sistema decide a qué negocio pertenece cada usuario; no se confía en lo que envía el navegador.
+- **El dinero no se puede tocar a mano:** ventas, caja y adelantos solo se registran mediante reglas que validan cada movimiento. Nadie puede escribir directo en la caja. Un script hace 60 intentos de escribir directo y comprueba que todos fallen.
+- **Sin citas cruzadas:** la base de datos impide que dos citas del mismo barbero se crucen, incluso si dos clientes reservan a la vez.
+- **Reserva pública protegida contra abuso:** hay un límite de reservas por teléfono, por conexión y por negocio, y cada número puede tener solo una reserva pendiente.
+- **Protección del sitio web:** todo viaja por HTTPS (conexión cifrada), el navegador recibe reglas que bloquean código extraño y hay un límite de intentos para iniciar sesión.
+- **Servidor propio:** el sistema corre en un VPS (un servidor Linux alquilado) con Docker, que empaqueta el sistema para que funcione igual en cualquier servidor. Nginx es la puerta de entrada al servidor. Antes estaba en servicios en la nube (Vercel y Supabase Cloud) y lo migré para controlar costos y datos.
 
 ## Calidad
 
-- **1779 pruebas automáticas** con `node --test`, todas pasan
-- **151 migraciones** versionadas
-- **33 scripts SQL** que verifican RLS, dinero, concurrencia y candados de acceso
-- QA en navegador con Chrome headless, auditoría de seguridad documentada y **474 commits**
+- **1779 pruebas automáticas**, todas pasan: revisan solas que cada parte haga lo que debe.
+- **151 cambios versionados de la base de datos**: cada cambio queda registrado y se puede repetir en orden.
+- **33 scripts de verificación** que comprueban la separación de datos entre negocios, el dinero, las reservas al mismo tiempo y los permisos.
+- Revisión de pantallas en el navegador, auditoría de seguridad documentada y **474 commits** (cambios guardados en el historial del proyecto).
 
 ## Estado
 
 - ✅ **En producción** desde septiembre de 2026, con sus primeras barberías de Trujillo.
-- ⏳ **Pendiente:** correo transaccional (SMTP), copias de seguridad fuera del servidor y personalización completa de colores.
+- ⏳ **Pendiente:** envío automático de correos, copias de seguridad (backups) fuera del servidor y personalización completa de colores.
 
 ## Mi rol
 
